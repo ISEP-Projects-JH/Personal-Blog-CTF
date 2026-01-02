@@ -1,0 +1,4 @@
+[submodule "sqli_ctf"]
+	path = sqli_ctf
+	url = https://github.com/ISEP-Projects-JH/SQLi-CTF.git
+    branch = main

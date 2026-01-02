@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Personal Space</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        .post {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+
+        .post-title {
+            font-weight: bold;
+        }
+
+        .error {
+            color: #a00;
+            margin-top: 20px;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 6px 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1 id="welcome"></h1>
+
+<section id="content">
+    Loading your posts...
+</section>
+
+<!-- Scripts -->
+<script src="app.js"></script>
+<script src="ctf-widget.js"></script>
+
+<script>
+/* =========================
+ * Helper Functions
+ * ========================= */
+
+/**
+ * Retrieve a query parameter from the URL
+ * @param {string} name
+ * @returns {string|null}
+ */
+function getParam(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+}
+
+/**
+ * Render authorization error UI
+ */
+function renderAuthError() {
+    document.getElementById("welcome").textContent = "Unauthorized";
+    document.getElementById("content").innerHTML = `
+        <div class="error">
+            You do not have valid login credentials. Please try again.
+        </div>
+        <button onclick="window.location.href='index.html'">
+            Back to Home
+        </button>
+    `;
+}
+
+/* =========================
+ * Main Logic
+ * ========================= */
+
+(async function () {
+    // Unpack required parameters explicitly
+    const username = getParam("username");
+    const jwt = getParam("jwt");
+
+    const content = document.getElementById("content");
+    const welcome = document.getElementById("welcome");
+
+    // 1. Missing required parameters
+    if (!username || !jwt) {
+        renderAuthError();
+        return;
+    }
+
+    welcome.textContent = `Welcome as ${username}`;
+
+    try {
+        // 2. Fetch user posts with explicit JWT
+        const response = await fetch(
+            `http://127.0.0.1:8000/api/user/${encodeURIComponent(username)}?jwt=${encodeURIComponent(jwt)}`
+        );
+
+        if (!response.ok) {
+            // noinspection ExceptionCaughtLocally
+            throw new Error("Unauthorized");
+        }
+
+        // Explicitly unpack expected response structure
+        const { posts } = await response.json();
+
+        // 3. No posts or invalid response
+        if (!posts || posts.length === 0) {
+            renderAuthError();
+            return;
+        }
+
+        // 4. Render posts
+        content.innerHTML = "";
+
+        posts.forEach(post => {
+            const { title, created_at } = post;
+
+            const div = document.createElement("div");
+            div.className = "post";
+            div.innerHTML = `
+                <div class="post-title">${title}</div>
+                <div>${created_at}</div>
+            `;
+            content.appendChild(div);
+        });
+
+    } catch (e) {
+        // Authentication or network failure
+        renderAuthError();
+    }
+})();
+</script>
+
+</body>
+</html>

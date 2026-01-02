@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Personal Blog</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        /* ===== Login ===== */
+
+        /* Login panel container (hidden by default) */
+        #loginBox {
+            display: none;
+            margin-top: 10px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            width: 300px;
+        }
+
+        #loginBox input {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        /* Login status / error message */
+        #loginResult {
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        /* ===== Posts ===== */
+
+        /* Single post entry */
+        .post {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+
+        .post-title {
+            font-weight: bold;
+        }
+
+        .post-meta {
+            font-size: 12px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Personal Blog</h1>
+
+<!-- ===== User Login ===== -->
+
+<section>
+    <!-- Toggle login panel visibility -->
+    <button onclick="toggleLogin()">User Login</button>
+
+    <div id="loginBox">
+        <label for="loginEmail"></label><input id="loginEmail" placeholder="Email">
+        <label for="loginPassword"></label><input id="loginPassword" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <div id="loginResult"></div>
+    </div>
+</section>
+
+<hr>
+
+<!-- ===== Recent Posts ===== -->
+
+<section>
+    <h2>Recent Posts</h2>
+    <!-- Container for dynamically loaded posts -->
+    <div id="posts"></div>
+</section>
+
+<!-- ===== Scripts ===== -->
+
+<script src="app.js"></script>
+<script src="ctf-widget.js"></script>
+
+<script>
+/* Debug: ensure API object is loaded */
+console.log("API =", window.API);
+</script>
+
+<script>
+/* =========================
+ * Login UI Logic
+ * ========================= */
+
+/**
+ * Toggle visibility of the login panel
+ */
+function toggleLogin() {
+    const box = document.getElementById("loginBox");
+
+    const isHidden =
+        box.style.display === "none" ||
+        getComputedStyle(box).display === "none";
+
+    box.style.display = isHidden ? "block" : "none";
+}
+
+/**
+ * Perform user login and redirect to personal space on success
+ */
+async function login() {
+    const email = document.getElementById("loginEmail").value;
+    const password = document.getElementById("loginPassword").value;
+    const result = document.getElementById("loginResult");
+
+    result.textContent = "Logging in...";
+
+    try {
+        // Authenticate user via backend API and unpack expected fields
+        const { success, username, jwt } = await API.loginUser(email, password);
+
+        if (!success) {
+            // Authentication failed
+            result.textContent = "Login failed";
+            return;
+        }
+
+        // Authentication succeeded
+        // Redirect to personal space with username and JWT
+        const u = encodeURIComponent(username);
+        const t = encodeURIComponent(jwt);
+
+        window.location.href =
+            `personal_space.html?username=${u}&jwt=${t}`;
+
+    } catch (e) {
+        // Network or unexpected error
+        result.textContent = "Error";
+    }
+}
+
+/* =========================
+ * Load Home Posts
+ * ========================= */
+
+/**
+ * Load recent posts for the homepage
+ */
+async function loadHome() {
+    const container = document.getElementById("posts");
+    container.textContent = "Loading...";
+
+    try {
+        // Fetch public posts from backend API
+        const posts = await API.fetchHome();
+        container.innerHTML = "";
+
+        posts.forEach(p => {
+            const div = document.createElement("div");
+            div.className = "post";
+            div.innerHTML = `
+                <div class="post-title">${p.title}</div>
+                <div class="post-meta">
+                    by ${p.author} (${p.email}) · ${p.comments} comments
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    } catch (e) {
+        // Failed to load posts
+        container.textContent = "Failed to load posts";
+    }
+}
+
+// Load homepage posts on initial page load
+loadHome();
+</script>
+
+</body>
+</html>

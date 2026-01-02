@@ -1,0 +1,25 @@
+name: sqli-ctf
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+
+  # Web framework
+  - fastapi
+  - uvicorn
+
+  # JWT support
+  - pyjwt
+
+  # Database dependency (required by ctf_sql)
+  - pymysql
+
+  # Multipart form support (FastAPI Form)
+  - python-multipart
+
+  # Optional but recommended utilities
+  - pip
+
+  - pip:
+      # encryption support
+      - cryptography

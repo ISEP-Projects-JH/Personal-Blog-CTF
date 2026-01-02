@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Area</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        .success {
+            font-size: 18px;
+            color: #060;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Admin</h1>
+
+<div id="content">
+    Checking admin credentials...
+</div>
+
+<!-- Core application logic -->
+<script src="app.js"></script>
+
+<!-- CTF helper / challenge widget -->
+<script src="ctf-widget.js"></script>
+
+<script>
+/**
+ * Get a query parameter value from the URL
+ * @param {string} name - Parameter name
+ * @returns {string|null}
+ */
+function getParam(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+}
+
+(async function () {
+    // Read JWT token from URL parameter
+    const jwt = getParam("jwt");
+    const content = document.getElementById("content");
+
+    // If no token is provided, redirect directly to the login page
+    if (!jwt) {
+        window.location.href = "admin_login.html";
+        return;
+    }
+
+    // Temporarily store admin JWT for API.checkAdmin() usage
+    localStorage.setItem("admin_jwt", jwt);
+
+    try {
+        // Verify admin privileges via backend API
+        const res = await API.checkAdmin();
+        if (!res.success) {
+            // noinspection ExceptionCaughtLocally
+            throw new Error("Invalid admin token");
+        }
+
+        // Validation succeeded
+        content.innerHTML = `
+            <div class="success">
+                Congratulations, you have successfully compromised the admin.<br><br>
+                This is an SQL injection test environment.<br>
+                We do not provide a real admin panel.
+            </div>
+        `;
+
+    } catch (e) {
+        // Validation failed, redirect back to login page
+        window.location.href = "admin_login.html";
+    }
+})();
+</script>
+
+</body>
+</html>

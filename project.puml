@@ -1,0 +1,53 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity users {
+  + id : INT <<PK>>
+  --
+  username : VARCHAR
+  email : VARCHAR
+  password_hash : VARCHAR
+  created_at : DATETIME
+}
+
+entity admins {
+  + id : INT <<PK>>
+  --
+  username : VARCHAR
+  password_hash : VARCHAR
+  created_at : DATETIME
+}
+
+entity categories {
+  + id : INT <<PK>>
+  --
+  name : VARCHAR
+}
+
+entity posts {
+  + id : INT <<PK>>
+  --
+  title : VARCHAR
+  content : TEXT
+  author_id : INT <<FK>>
+  category_id : INT <<FK>>
+  created_at : DATETIME
+  is_published : BOOLEAN
+}
+
+entity comments {
+  + id : INT <<PK>>
+  --
+  post_id : INT <<FK>>
+  user_id : INT <<FK>>
+  content : TEXT
+  created_at : DATETIME
+}
+
+users ||--o{ posts : writes
+categories ||--o{ posts : classifies
+posts ||--o{ comments : has
+users ||--o{ comments : writes
+
+@enduml

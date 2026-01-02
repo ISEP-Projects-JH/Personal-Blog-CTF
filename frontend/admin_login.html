@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        #loginBox {
+            width: 300px;
+            border: 1px solid #ccc;
+            padding: 12px;
+        }
+
+        #loginBox input {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        #result {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #a00;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Admin Login</h1>
+
+<div id="loginBox">
+    <label for="adminUsername"></label>
+    <input id="adminUsername" placeholder="Username">
+
+    <label for="adminPassword"></label>
+    <input id="adminPassword" type="password" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+    <div id="result"></div>
+</div>
+
+<script src="app.js"></script>
+<script src="ctf-widget.js"></script>
+
+<script>
+/**
+ * Perform admin login and redirect on success
+ */
+async function login() {
+    const username = document.getElementById("adminUsername").value;
+    const password = document.getElementById("adminPassword").value;
+    const result = document.getElementById("result");
+
+    result.textContent = "Logging in...";
+
+    try {
+        // Call backend API and unpack expected fields explicitly
+        const { success, jwt } = await API.loginAdmin(username, password);
+
+        if (!success) {
+            result.textContent = "Login failed";
+            return;
+        }
+
+        // Redirect to admin page with JWT in query string
+        window.location.href = `admin.html?jwt=${encodeURIComponent(jwt)}`;
+
+    } catch (e) {
+        result.textContent = "Error";
+    }
+}
+</script>
+
+</body>
+</html>
