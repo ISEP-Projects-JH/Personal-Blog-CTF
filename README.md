@@ -33,7 +33,7 @@ Both modes are backed by **separate MySQL databases**.
 ## 2. Project Structure
 
 ```
-./
+Personal-Blog-CTF/
 ├── app/
 │   └── main.py
 ├── frontend/
@@ -42,8 +42,10 @@ Both modes are backed by **separate MySQL databases**.
 │   ├── app.js
 │   ├── ctf-widget.js
 │   ├── index.html
-│   └── personal_space.html
+│   ├── personal_space.html
+│   └── style.css
 ├── scripts/
+│   ├── __init__.py
 │   ├── db_bootstrap.py
 │   ├── init_prod.sql
 │   ├── insert_mock.py
@@ -55,9 +57,11 @@ Both modes are backed by **separate MySQL databases**.
 │   └── run_reset_ctf.py
 ├── sqli_ctf/
 │   └── ctf_sql/
+├── .gitignore
 ├── .gitmodules
 ├── environment.yml
-└── project.puml
+├── project.puml
+└── README.md
 ```
 
 * `sqli_ctf/ctf_sql` is pulled automatically via `.gitmodules`
