@@ -3,33 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Personal Space</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-        }
-
-        .post {
-            border-bottom: 1px solid #ddd;
-            padding: 10px 0;
-        }
-
-        .post-title {
-            font-weight: bold;
-        }
-
-        .error {
-            color: #a00;
-            margin-top: 20px;
-        }
-
-        button {
-            margin-top: 16px;
-            padding: 6px 12px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -91,7 +65,7 @@ function renderAuthError() {
         return;
     }
 
-    welcome.textContent = `Welcome as ${username}`;
+    welcome.innerHTML = `Welcome as <span class="username">${username}</span>`;
 
     try {
         // 2. Fetch user posts with explicit JWT

@@ -1,0 +1,318 @@
+/* =========================
+ * Design Tokens
+ * ========================= */
+
+:root {
+    --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    --color-bg: #f4f6f8;
+    --color-card: #ffffff;
+    --color-text: #222;
+    --color-muted: #666;
+    --color-border: #e0e0e0;
+    --color-primary: #4f46e5;
+    --color-primary-hover: #4338ca;
+    --color-error: #f00;
+
+    --radius: 8px;
+    --shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+/* =========================
+ * Base Layout
+ * ========================= */
+
+body {
+    margin: 0;
+    padding: 40px 0;
+    font-family: var(--font-main), serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* Center main content */
+body > * {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 20px;
+}
+
+h1 {
+    font-size: 32px;
+    margin-bottom: 24px;
+}
+
+/* =========================
+ * Global Buttons
+ * ========================= */
+
+button {
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    background-color: var(--color-primary);
+    color: white;
+}
+
+button:hover {
+    background-color: var(--color-primary-hover);
+}
+
+/* =========================
+ * Login Section (Index Page)
+ * ========================= */
+
+#loginBox {
+    margin-top: 16px;
+    padding: 16px;
+    width: 320px;
+
+    background-color: var(--color-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+#loginBox input {
+    width: 90%;
+    padding: 10px;
+    margin-bottom: 10px;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: 14px;
+}
+
+#loginBox input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+#loginResult {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--color-muted);
+}
+
+/* =========================
+ * Posts (Shared Styles)
+ * ========================= */
+
+.post {
+    background-color: var(--color-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    margin-bottom: 16px;
+
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.post:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+.post-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.post-meta {
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+/* =========================
+ * Personal Space
+ * ========================= */
+
+#welcome {
+    margin-bottom: 24px;
+}
+
+/* Highlighted username */
+.username {
+    color: #1e90ff;
+    font-weight: bold;
+}
+
+/* Error message block */
+.error {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    color: var(--color-error);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* =========================
+ * CTF Widget
+ * (Extracted from ctf-widget.js)
+ * ========================= */
+
+#ctf-widget {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 9999;
+
+    /* Use site-wide font for consistency */
+    font-family: var(--font-main), serif;
+}
+
+/* Main bar styled as a compact card */
+#ctf-widget .ctf-main {
+    background: var(--color-card);
+    color: var(--color-text);
+
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+
+    border: 1px solid var(--color-border);
+
+    display: flex;
+    gap: 10px;
+    align-items: center;
+
+    cursor: default;
+    user-select: none;
+}
+
+/* Widget title highlighted with primary color */
+#ctf-widget .ctf-title {
+    font-weight: 700;
+    color: var(--color-primary);
+    letter-spacing: 1px;
+}
+
+/* Status text with muted appearance */
+#ctf-widget .ctf-status {
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+/* Disabled state: slightly faded but still visible */
+#ctf-widget .ctf-main.ctf-disabled {
+    opacity: 0.75;
+}
+
+/* Tooltip styled as a floating card */
+#ctf-widget .ctf-tooltip {
+    display: none;
+    margin-top: 8px;
+
+    background: var(--color-card);
+    color: var(--color-text);
+
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+
+    border: 1px solid var(--color-border);
+
+    font-size: 12px;
+    min-width: 200px;
+}
+
+/* Show tooltip on hover */
+#ctf-widget:hover .ctf-tooltip {
+    display: block;
+}
+
+/* Two-row layout: User / Admin */
+#ctf-widget .ctf-row {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+#ctf-widget .ctf-label {
+    text-align: left;
+    color: var(--color-muted);
+}
+
+/* Star indicator */
+#ctf-widget .ctf-star {
+    text-align: left;
+    font-size: 1.25em;
+    line-height: 1;
+}
+
+/* OK / NO flag colors */
+#ctf-widget .ctf-flag-ok {
+    color: var(--color-primary);
+}
+
+#ctf-widget .ctf-flag-no {
+    color: var(--color-error);
+}
+
+/* Progress bar: neutral background + primary progress */
+#ctf-widget .ctf-progress {
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+#ctf-widget .ctf-progress-bar {
+    height: 100%;
+    width: 0;
+    background: var(--color-primary);
+    border-radius: 999px;
+}
+
+/* Small screens: avoid covering main content */
+@media (max-width: 520px) {
+    #ctf-widget {
+        right: 10px;
+        top: 10px;
+    }
+
+    #ctf-widget .ctf-tooltip {
+        min-width: 180px;
+    }
+}
+
+/* =========================
+ * Admin Area
+ * ========================= */
+
+#content {
+    margin-top: 24px;
+}
+
+/* Admin success message */
+.success {
+    background-color: var(--color-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+
+    padding: 20px;
+    font-size: 16px;
+    line-height: 1.6;
+
+    color: var(--color-text);
+    border-left: 6px solid var(--color-primary);
+}
+
+/* =========================
+ * Admin Login
+ * ========================= */
+
+/* Login result / error message */
+#result {
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--color-error);
+}
