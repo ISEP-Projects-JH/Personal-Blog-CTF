@@ -149,7 +149,7 @@ This script behaves the same way as the original `sqli-ctf` setup.
 ### 5.2 Initialize Production Database (Empty)
 
 ```bash
-python scripts/run_init_prod.py
+python -m scripts.run_init_prod
 ```
 
 * Creates schema only
@@ -162,7 +162,7 @@ python scripts/run_init_prod.py
 ### 5.3 CTF Database Reset (Recommended)
 
 ```bash
-python scripts/run_reset_ctf.py
+python -m scripts.run_reset_ctf
 ```
 
 This will:
@@ -179,11 +179,11 @@ Running this script is equivalent to a **full CTF reset**.
 ### 5.4 Optional Mock Data Management (Production)
 
 ```bash
-python scripts/insert_mock.py
+python -m scripts.insert_mock
 ```
 
 ```bash
-python scripts/remove_mock.py
+python -m scripts.remove_mock
 ```
 
 These scripts add or remove a **small amount of mock data** in the production database.
@@ -200,10 +200,19 @@ These scripts add or remove a **small amount of mock data** in the production da
 export CTF_MODE=ctf
 ```
 
+on Windows: 
+```bash
+set CTF_MODE=ctf
+```
+
 #### Production mode (safe behavior)
 
 ```bash
 unset CTF_MODE
+```
+on Windows: 
+```bash
+set CTF_MODE=
 ```
 
 The backend behavior is determined internally by how `ctf_sql` detects this variable.
