@@ -36,6 +36,8 @@ Both modes are backed by **separate MySQL databases**.
 Personal-Blog-CTF/
 ├── app/
 │   └── main.py
+├── docker_scripts/
+│   └── docker-entrypoint.sh
 ├── frontend/
 │   ├── admin.html
 │   ├── admin_login.html
@@ -59,8 +61,10 @@ Personal-Blog-CTF/
 │   └── ctf_sql/
 ├── .gitignore
 ├── .gitmodules
+├── Dockerfile
 ├── environment.yml
 ├── project.puml
+├── pyproject.toml
 └── README.md
 ```
 
@@ -143,7 +147,7 @@ Run once to create:
 * CTF user & database
 
 ```bash
-python scripts/db_bootstrap.py
+python -m scripts.db_bootstrap
 ```
 
 This script behaves the same way as the original `sqli-ctf` setup.
@@ -265,15 +269,108 @@ http://localhost:8080
 
 ---
 
-## 9. Summary
+## 9. Docker Usage (Lightweight Wrapper Example)
+
+The following Docker commands are provided as a **lightweight demonstration wrapper**, not as a fully isolated deployment.
+
+This Docker setup is intentionally minimal and serves the following purposes:
+
+* Use **Docker as an environment adapter**, replacing Conda/Mamba
+* Provide a quick way to run the project without installing Python dependencies locally
+* Keep the runtime behavior identical to the native (non-Docker) setup
+
+### Important Design Notes
+
+* **Docker does NOT replace MySQL**
+
+  * MySQL is still expected to run on the **host machine** (or a remote server)
+  * Database users, passwords, and schemas **must be configured in advance**
+* The container exposes:
+
+  * Backend on **host port 8000**
+  * Frontend on **host port 8080**
+* This is required because:
+
+  * The frontend is currently **hardcoded to call `http://localhost:8000`**
+  * Cross-origin requests (CORS) are intentionally enabled
+* The container connects to MySQL via:
+
+  * `host.docker.internal` (host machine)
+  * If you use a remote or network MySQL server, replace it with the appropriate hostname or IP
+
+The example below assumes a **local MySQL server** with an **admin user `root` / `root`** for demonstration purposes.
+
+---
+
+### Docker Build
+
+```bash
+docker build -t personal-blog-ctf .
+```
+
+---
+
+### Docker Run (POSIX systems: Linux / macOS)
+
+```bash
+docker run -it --rm \
+  -p 8080:8080 \
+  -p 8000:8000 \
+  -e MYSQL_ADMIN_HOST=host.docker.internal \
+  -e MYSQL_ADMIN_USER=root \
+  -e MYSQL_ADMIN_PASS=root \
+  -e DB_HOST=host.docker.internal \
+  -e CTF_DB_HOST=host.docker.internal \
+  -e CTF_MODE=ctf \
+  -e AUTO_DB_INIT=1 \
+  personal-blog-ctf
+```
+
+---
+
+### Docker Run (Windows CMD / PowerShell)
+
+Windows shells do **not support backslash (`\`) line continuation**, so the same command must be written on a single line:
+
+```bat
+docker run -it --rm -p 8080:8080 -p 8000:8000 -e MYSQL_ADMIN_HOST=host.docker.internal -e MYSQL_ADMIN_USER=root -e MYSQL_ADMIN_PASS=root -e DB_HOST=host.docker.internal -e CTF_DB_HOST=host.docker.internal -e CTF_MODE=ctf -e AUTO_DB_INIT=1 personal-blog-ctf
+```
+
+---
+
+### Environment Variable Behavior
+
+* `AUTO_DB_INIT=1`
+
+  * Automatically runs database bootstrap and initialization logic at container startup
+* `CTF_MODE=ctf`
+
+  * Enables intentionally vulnerable CTF behavior
+  * Unset or remove this variable to run in production-safe mode
+* All database-related variables behave **exactly the same** as in the non-Docker setup
+
+---
+
+### Conclusion
+
+This Docker configuration:
+
+* Replaces Conda as a **runtime dependency manager**
+* Keeps MySQL **external and explicit**
+* Preserves localhost-based frontend ↔ backend communication
+* Works identically on Windows, macOS, and Linux (with shell-specific syntax differences)
+
+It is designed for **teaching, demos, and controlled experimentation**, not for hardened or isolated production deployment.
+
+## Summary
 
 To run the project:
 
 1. Install MySQL
-2. Create and activate the conda environment
+2. Create and activate the conda environment or use docker
 3. Configure database credentials (or use defaults)
 4. Run `db_bootstrap.py`
-5. Initialize production and/or reset CTF database
+5. Initialize production and/or reset the CTF database
 6. Select CTF or production mode
 7. Start backend and frontend
 

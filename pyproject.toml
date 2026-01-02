@@ -1,0 +1,29 @@
+[project]
+name = "sqli-ctf"
+version = "0.1.0"
+description = "Personal Blog SQLi CTF demonstration service"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Web framework
+    "fastapi",
+    "uvicorn",
+
+    # JWT support
+    "pyjwt",
+
+    # Database (required by ctf_sql)
+    "pymysql",
+
+    # Multipart form support
+    "python-multipart",
+
+    # Encryption support
+    "cryptography",
+]
+
+[tool.uvicorn]
+factory = false
+
+[tool.setuptools]
+packages = []
