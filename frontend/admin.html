@@ -2,67 +2,150 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Area</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | System Administration</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        #dashboard-ui { display: none; }
+        #loading-ui {
+            display: flex; align-items: center; justify-content: center;
+            height: 100vh; background: #f1f5f9; color: #64748b; font-weight: 600;
+        }
+    </style>
 </head>
 <body>
 
-<h1>Admin</h1>
-
-<div id="content">
-    Checking admin credentials...
+<div id="loading-ui">
+    Validating Cryptographic Token...
 </div>
 
-<!-- Core application logic -->
-<script src="app.js"></script>
+<div id="dashboard-ui" class="admin-layout">
 
-<!-- CTF helper / challenge widget -->
+    <aside class="admin-sidebar">
+        <div class="logo">
+            <span>//</span> ADMIN PANEL
+        </div>
+        <nav class="admin-nav">
+            <a href="#" class="active">Dashboard</a>
+            <a href="#">User Management</a>
+            <a href="#">Security Logs</a>
+            <a href="#">Database Config</a>
+            <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+            <a href="index.html">Log Out</a>
+        </nav>
+    </aside>
+
+    <main class="admin-main">
+
+        <header style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+            <div>
+                <h1 style="font-size: 24px;">System Overview</h1>
+                <p style="color: var(--color-text-muted); font-size: 14px;">Last login: Just now from 127.0.0.1</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 99px; font-size: 12px; font-weight: bold;">
+                    ● System Healthy
+                </span>
+            </div>
+        </header>
+
+        <div id="ctf-message-area"></div>
+
+        <div class="grid-3">
+
+            <div class="dash-card" style="grid-column: span 2;">
+                <h3>
+                    Real-time Requests (24h)
+                    <span class="mock-badge">(Mock Data)</span>
+                </h3>
+                <div class="chart-container">
+                    <div class="bar" style="height: 30%"></div>
+                    <div class="bar" style="height: 50%"></div>
+                    <div class="bar" style="height: 40%"></div>
+                    <div class="bar" style="height: 70%"></div>
+                    <div class="bar" style="height: 60%"></div>
+                    <div class="bar" style="height: 85%"></div>
+                    <div class="bar" style="height: 55%"></div>
+                    <div class="bar" style="height: 90%"></div>
+                    <div class="bar" style="height: 45%"></div>
+                    <div class="bar" style="height: 65%"></div>
+                </div>
+            </div>
+
+            <div class="dash-card">
+                <h3>
+                    Resource Usage
+                    <span class="mock-badge">(Mock Data)</span>
+                </h3>
+
+                <div class="progress-group">
+                    <div class="progress-label"><span>CPU Core 0</span><span>45%</span></div>
+                    <div class="progress-track"><div class="progress-fill" style="width: 45%"></div></div>
+                </div>
+
+                <div class="progress-group">
+                    <div class="progress-label"><span>CPU Core 1</span><span>12%</span></div>
+                    <div class="progress-track"><div class="progress-fill" style="width: 12%"></div></div>
+                </div>
+
+                <div class="progress-group">
+                    <div class="progress-label"><span>Memory (RAM)</span><span>78%</span></div>
+                    <div class="progress-track"><div class="progress-fill warn" style="width: 78%"></div></div>
+                </div>
+
+                <div class="progress-group">
+                    <div class="progress-label"><span>Storage (NVMe)</span><span>92%</span></div>
+                    <div class="progress-track"><div class="progress-fill danger" style="width: 92%"></div></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="app.js"></script>
 <script src="ctf-widget.js"></script>
 
 <script>
-/**
- * Get a query parameter value from the URL
- * @param {string} name - Parameter name
- * @returns {string|null}
- */
 function getParam(name) {
     const params = new URLSearchParams(window.location.search);
     return params.get(name);
 }
 
 (async function () {
-    // Read JWT token from URL parameter
     const jwt = getParam("jwt");
-    const content = document.getElementById("content");
+    const loadingUi = document.getElementById("loading-ui");
+    const dashboardUi = document.getElementById("dashboard-ui");
+    const messageArea = document.getElementById("ctf-message-area");
 
-    // If no token is provided, redirect directly to the login page
     if (!jwt) {
         window.location.href = "admin_login.html";
         return;
     }
 
-    // Temporarily store admin JWT for API.checkAdmin() usage
     localStorage.setItem("admin_jwt", jwt);
 
     try {
-        // Verify admin privileges via backend API
         const res = await API.checkAdmin();
         if (!res.success) {
-            // noinspection ExceptionCaughtLocally
             throw new Error("Invalid admin token");
         }
 
-        // Validation succeeded
-        content.innerHTML = `
-            <div class="success">
-                Congratulations, you have successfully compromised the admin.<br><br>
-                This is an SQL injection test environment.<br>
-                We do not provide a real admin panel.
+        loadingUi.style.display = "none";
+        dashboardUi.style.display = "grid";
+
+        messageArea.innerHTML = `
+            <div class="alert-box">
+                <div class="alert-icon">🔓</div>
+                <div>
+                    <strong style="display:block; margin-bottom: 4px; font-size:16px;">System Compromised Successfully</strong>
+                    Congratulations! You have successfully bypassed authentication and accessed the admin panel.<br>
+                    <span style="font-size:13px; opacity: 0.8;">This is an SQL injection test environment. We do not provide a real admin backend.</span>
+                </div>
             </div>
         `;
 
     } catch (e) {
-        // Validation failed, redirect back to login page
         window.location.href = "admin_login.html";
     }
 })();

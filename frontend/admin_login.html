@@ -2,57 +2,79 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal | SecureBlog</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="admin-login-page">
 
-<h1>Admin Login</h1>
+    <div class="admin-login-card">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">
+                <span style="color: var(--color-error);">//</span> SYSTEM ADMIN
+            </div>
+            <p style="color: var(--color-text-muted); font-size: 14px;">
+                Authorized personnel only. <br>All activities are logged.
+            </p>
+        </div>
 
-<section>
-<div id="loginBox">
-    <label for="adminUsername"></label>
-    <input id="adminUsername" placeholder="Username">
+        <div id="loginBox">
+            <div class="form-group">
+                <label for="adminUsername">System ID</label>
+                <input id="adminUsername" placeholder="admin">
+            </div>
 
-    <label for="adminPassword"></label>
-    <input id="adminPassword" type="password" placeholder="Password">
+            <div class="form-group">
+                <label for="adminPassword">Passcode</label>
+                <input id="adminPassword" type="password" placeholder="••••••••••••">
+            </div>
 
-    <button onclick="login()">Login</button>
-    <div id="result"></div>
-</div>
-</section>
+            <button onclick="login()" style="width: 100%; background-color: #1e293b;">Authenticate</button>
+            <div id="result" style="margin-top: 20px; text-align: center; font-size: 14px; min-height: 20px;"></div>
+        </div>
 
-<script src="app.js"></script>
-<script src="ctf-widget.js"></script>
+        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #94a3b8;">
+            <a href="index.html" style="color: inherit; text-decoration: underline;">← Return to Public Site</a>
+        </div>
+    </div>
 
-<script>
-/**
- * Perform admin login and redirect on success
- */
-async function login() {
-    const username = document.getElementById("adminUsername").value;
-    const password = document.getElementById("adminPassword").value;
-    const result = document.getElementById("result");
+    <script src="app.js"></script>
+    <script src="ctf-widget.js"></script>
 
-    result.textContent = "Logging in...";
+    <script>
+    /**
+     * Perform admin login and redirect on success
+     */
+    async function login() {
+        const username = document.getElementById("adminUsername").value;
+        const password = document.getElementById("adminPassword").value;
+        const result = document.getElementById("result");
 
-    try {
-        // Call backend API and unpack expected fields explicitly
-        const { success, jwt } = await API.loginAdmin(username, password);
+        result.textContent = "Verifying Identity...";
+        result.style.color = "var(--color-text-muted)";
 
-        if (!success) {
-            result.textContent = "Login failed";
-            return;
+        try {
+            const { success, jwt } = await API.loginAdmin(username, password);
+
+            if (!success) {
+                result.textContent = "Access Denied: Invalid Credentials";
+                result.style.color = "var(--color-error)";
+                return;
+            }
+
+            result.textContent = "Access Granted. Redirecting...";
+            result.style.color = "var(--color-success)";
+
+            setTimeout(() => {
+                window.location.href = `admin.html?jwt=${encodeURIComponent(jwt)}`;
+            }, 800);
+
+        } catch (e) {
+            result.textContent = "Connection Error";
+            result.style.color = "var(--color-error)";
         }
-
-        // Redirect to admin page with JWT in query string
-        window.location.href = `admin.html?jwt=${encodeURIComponent(jwt)}`;
-
-    } catch (e) {
-        result.textContent = "Error";
     }
-}
-</script>
+    </script>
 
 </body>
 </html>

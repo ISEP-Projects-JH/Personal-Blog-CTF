@@ -2,112 +2,180 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Personal Space</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Workspace | SecureBlog</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1 id="welcome"></h1>
+<header class="site-header">
+    <div class="container header-inner">
+        <a href="index.html" class="logo">
+            <span>//</span> SecureBlog
+        </a>
+        <div class="nav-links">
+            <span style="color: var(--color-text-muted); font-size: 13px;">Secure Connection Established</span>
+            <a href="index.html" style="margin-left: 20px;">Logout</a>
+        </div>
+    </div>
+</header>
 
-<section id="content">
-    Loading your posts...
-</section>
+<div class="dashboard-header">
+    <div class="container">
+        <h1 id="welcome" class="welcome-msg">Authenticating...</h1>
+        <p style="color: var(--color-text-muted); margin-top: 8px;">
+            Manage your submissions and view private architectural drafts.
+        </p>
+    </div>
+</div>
 
-<!-- Scripts -->
+<main class="container">
+
+    <div style="display: grid; grid-template-columns: 250px 1fr; gap: 40px; align-items: start;">
+
+        <aside id="user-profile" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--color-border);">
+            <div style="width: 60px; height: 60px; background: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px; margin-bottom: 16px;">
+                U
+            </div>
+            <h3 style="font-size: 16px; margin-bottom: 4px;">
+                User Profile
+                <span class="mock-badge">(Mock Data)</span>
+            </h3>
+
+            <p style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">Full Stack Engineer</p>
+
+            <hr style="border: 0; border-top: 1px solid var(--color-border); margin: 15px 0;">
+
+            <div style="font-size: 13px; display: flex; flex-direction: column; gap: 10px;">
+                <a href="#" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">My Posts</a>
+                <a href="#" style="color: var(--color-text-muted); text-decoration: none;">Drafts (0)</a>
+                <a href="#" style="color: var(--color-text-muted); text-decoration: none;">Settings</a>
+            </div>
+        </aside>
+
+        <section>
+            <div class="section-header">
+                <h2>Your Activity History</h2>
+            </div>
+
+            <div id="content" class="grid-3" style="display: block;">
+                <div style="padding: 40px; text-align: center; color: var(--color-text-muted);">
+                    Retrieving encrypted data...
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</main>
+
+<footer>
+    <div class="container">
+        <p>&copy; 2026 SecureBlog Internal System.</p>
+    </div>
+</footer>
+
 <script src="app.js"></script>
 <script src="ctf-widget.js"></script>
 
 <script>
-/* =========================
- * Helper Functions
- * ========================= */
-
-/**
- * Retrieve a query parameter from the URL
- * @param {string} name
- * @returns {string|null}
- */
-function getParam(name) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(name);
-}
-
-/**
- * Render authorization error UI
- */
-function renderAuthError() {
-    document.getElementById("welcome").textContent = "Unauthorized";
-    document.getElementById("content").innerHTML = `
-        <div class="error">
-            You do not have valid login credentials. Please try again.
-        </div>
-        <button onclick="window.location.href='index.html'">
-            Back to Home
-        </button>
-    `;
-}
-
-/* =========================
- * Main Logic
- * ========================= */
-
-(async function () {
-    // Unpack required parameters explicitly
-    const username = getParam("username");
-    const jwt = getParam("jwt");
-
-    const content = document.getElementById("content");
-    const welcome = document.getElementById("welcome");
-
-    // 1. Missing required parameters
-    if (!username || !jwt) {
-        renderAuthError();
-        return;
+    /* =========================
+     * Helper Functions
+     * ========================= */
+    function getParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name);
     }
 
-    welcome.innerHTML = `Welcome as <span class="username">${username}</span>`;
+    function renderAuthError() {
+        document.getElementById("welcome").innerHTML = "Access Denied";
+        document.getElementById("user-profile").style.display = "none";
+        document.getElementById("content").innerHTML = `
+            <div class="error-state">
+                <h3 style="color: #991b1b; margin-bottom: 10px;">Authorization Failed</h3>
+                <p>You do not have valid login credentials or your session has expired.</p>
+                <button onclick="window.location.href='index.html'" style="margin-top: 20px; background: #991b1b;">
+                    Return to Home
+                </button>
+            </div>
+        `;
+    }
 
-    try {
-        // 2. Fetch user posts with explicit JWT
-        const response = await fetch(
-            `http://127.0.0.1:8000/api/user/${encodeURIComponent(username)}?jwt=${encodeURIComponent(jwt)}`
-        );
+    /* =========================
+     * Main Logic
+     * ========================= */
 
-        if (!response.ok) {
-            // noinspection ExceptionCaughtLocally
-            throw new Error("Unauthorized");
-        }
+    (async function () {
+        const username = getParam("username");
+        const jwt = getParam("jwt");
+        const content = document.getElementById("content");
+        const welcome = document.getElementById("welcome");
 
-        // Explicitly unpack expected response structure
-        const { posts } = await response.json();
-
-        // 3. No posts or invalid response
-        if (!posts || posts.length === 0) {
+        if (!username || !jwt) {
             renderAuthError();
             return;
         }
 
-        // 4. Render posts
-        content.innerHTML = "";
+        // Updated rendering for username
+        welcome.innerHTML = `Welcome back, <span class="username">${username}</span>`;
 
-        posts.forEach(post => {
-            const { title, created_at } = post;
+        try {
+            const response = await fetch(
+                `http://127.0.0.1:8000/api/user/${encodeURIComponent(username)}?jwt=${encodeURIComponent(jwt)}`
+            );
 
-            const div = document.createElement("div");
-            div.className = "post";
-            div.innerHTML = `
-                <div class="post-title">${title}</div>
-                <div>${created_at}</div>
-            `;
-            content.appendChild(div);
-        });
+            if (!response.ok) {
+                throw new Error("Unauthorized");
+            }
 
-    } catch (e) {
-        // Authentication or network failure
-        renderAuthError();
-    }
-})();
+            const {posts} = await response.json();
+
+            if (!posts || posts.length === 0) {
+                content.innerHTML = `
+                    <div style="background: white; padding: 40px; border-radius: 12px; border: 1px dashed var(--color-border); text-align: center;">
+                        <p>No posts found for this account.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Enhanced Post Rendering in Dashboard
+            content.innerHTML = '<div style="display: flex; flex-direction: column; gap: 16px;">';
+
+            posts.forEach(post => {
+                const {title, created_at} = post;
+
+                // Using a list-row style for the dashboard instead of cards
+                const div = document.createElement("div");
+                div.style.cssText = `
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    border: 1px solid var(--color-border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                `;
+
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight: 600; font-size: 16px; color: var(--color-text-main);">${title}</div>
+                        <div style="font-size: 13px; color: var(--color-text-muted); margin-top: 4px;">Status: Published</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 13px; color: var(--color-text-muted);">${created_at}</div>
+                        <button class="secondary" style="padding: 4px 12px; font-size: 12px; margin-top: 6px;">Edit</button>
+                    </div>
+                `;
+                content.appendChild(div);
+            });
+
+            content.innerHTML += '</div>';
+
+        } catch (e) {
+            renderAuthError();
+        }
+    })();
 </script>
-
 </body>
 </html>
