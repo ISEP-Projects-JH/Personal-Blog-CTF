@@ -2,135 +2,207 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Personal Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLi-CTF | Research Lab</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>Personal Blog</h1>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="index.html" class="logo">
+                <span>//</span> SQLi-CTF
+            </a>
+            <nav class="nav-links">
+                <a href="#">Documentation</a>
+                <a href="#">CVE Database</a>
+                <a href="admin_login.html" class="nav-link-admin" title="Administrator Access">
+                    Admin Portal
+                </a>
+                <button onclick="toggleLogin()">Member Login</button>
+            </nav>
+        </div>
+    </header>
 
-<!-- ===== User Login ===== -->
+    <div class="hero">
+        <div class="container">
+            <span class="badge">Vulnerability Research</span>
+            <h1>Anatomy of Dependency Failure</h1>
+            <p>
+                Exploring <strong>CVE-2019-12989</strong> and the dangers of insufficient sanitization at the driver level.
+                This environment simulates how a secure application logic can still be compromised if the underlying
+                dependency (like <code>libmysqlclient</code> or our <code>fake_MySqldb</code>) fails to guarantee strict ABI compatibility or proper escaping.
+            </p>
+            <div style="font-size: 13px; color: #64748b; margin-top: 20px;">
+                Reference: <a href="#" style="color: #94a3b8;">Dependency-Level Vulnerability Model</a>
+            </div>
 
-<section>
-    <!-- Toggle login panel visibility -->
-    <button onclick="toggleLogin()">User Login</button>
-
-    <div id="loginBox">
-        <label for="loginEmail"></label><input id="loginEmail" placeholder="Email">
-        <label for="loginPassword"></label><input id="loginPassword" type="password" placeholder="Password">
-        <button onclick="login()">Login</button>
-        <div id="loginResult"></div>
+            <button onclick="document.getElementById('content-area').scrollIntoView({behavior: 'smooth'})" style="margin-top: 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3);">
+                Access Case Studies
+            </button>
+        </div>
     </div>
-</section>
 
-<hr>
+    <main class="container" id="content-area">
 
-<!-- ===== Recent Posts ===== -->
+        <section style="margin-bottom: 60px; margin-top: 40px;">
+            <div class="section-header">
+                <h2>Why Databases Become Unsafe</h2>
+            </div>
+            <div class="grid-3">
+                <article class="info-card">
+                    <h4>The Illusion of Safety</h4>
+                    <p>Developers often trust that `mysqlclient` handles all sanitization. However, if the Python wrapper and the C library versions mismatch, protection fails.</p>
+                </article>
+                <article class="info-card">
+                    <h4>Dependency Isolation</h4>
+                    <p>To ensure reproducibility, this CTF uses <code>fake_MySqldb</code>. It mimics the behavior where input flows directly into the query builder.</p>
+                </article>
+                <article class="info-card">
+                    <h4>The Attack Vector</h4>
+                    <p>Input strings bypassing the sanitization layer allow attackers to break out of SQL quotes, altering the query logic (e.g., <code>' OR 1=1 --</code>).</p>
+                </article>
+            </div>
+        </section>
 
-<section>
-    <h2>Recent Posts</h2>
-    <!-- Container for dynamically loaded posts -->
-    <div id="posts"></div>
-</section>
+        <section>
+            <div class="section-header">
+                <h2>Public Threads</h2>
+            </div>
+            <div id="posts" class="grid-3">
+                <div style="grid-column: 1/-1; text-align: center; color: var(--color-text-muted); padding: 40px;">
+                    Initializing database connection...
+                </div>
+            </div>
+        </section>
 
-<!-- ===== Scripts ===== -->
+    </main>
 
-<script src="app.js"></script>
-<script src="ctf-widget.js"></script>
+    <div id="loginOverlay" class="login-overlay">
+        <div id="loginBox">
+            <button class="close-btn" onclick="toggleLogin()">&times;</button>
 
-<script>
-/* Debug: ensure API object is loaded */
-console.log("API =", window.API);
-</script>
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: var(--color-text-main);">Member Access</h3>
 
-<script>
-/* =========================
- * Login UI Logic
- * ========================= */
+            <div class="form-group">
+                <label for="loginEmail">Email Address</label>
+                <input id="loginEmail" placeholder="user@example.com">
+            </div>
 
-/**
- * Toggle visibility of the login panel
- */
-function toggleLogin() {
-    const box = document.getElementById("loginBox");
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input id="loginPassword" type="password" placeholder="••••••••">
+            </div>
 
-    const isHidden =
-        box.style.display === "none" ||
-        getComputedStyle(box).display === "none";
+            <button onclick="login()" style="width: 100%;">Sign In</button>
+            <div id="loginResult" style="margin-top: 15px; text-align: center; font-size: 13px; min-height: 20px;"></div>
+        </div>
+    </div>
 
-    box.style.display = isHidden ? "block" : "none";
-}
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 SQLi-CTF Framework.</p>
+            <p style="opacity: 0.6;">Educational Environment | Do not use heavily in production.</p>
+        </div>
+    </footer>
 
-/**
- * Perform user login and redirect to personal space on success
- */
-async function login() {
-    const email = document.getElementById("loginEmail").value;
-    const password = document.getElementById("loginPassword").value;
-    const result = document.getElementById("loginResult");
+    <script src="app.js"></script>
+    <script src="ctf-widget.js"></script>
 
-    result.textContent = "Logging in...";
+    <script>
+        console.log("Environment Ready");
 
-    try {
-        // Authenticate user via backend API and unpack expected fields
-        const { success, username, jwt } = await API.loginUser(email, password);
+        // UI Logic
+        function toggleLogin() {
+            const overlay = document.getElementById("loginOverlay");
+            const isHidden = getComputedStyle(overlay).display === "none";
 
-        if (!success) {
-            // Authentication failed
-            result.textContent = "Login failed";
-            return;
+            if (isHidden) {
+                overlay.style.display = "flex";
+                document.getElementById("loginEmail").focus();
+            } else {
+                overlay.style.display = "none";
+            }
         }
 
-        // Authentication succeeded
-        // Redirect to personal space with username and JWT
-        const u = encodeURIComponent(username);
-        const t = encodeURIComponent(jwt);
-
-        window.location.href =
-            `personal_space.html?username=${u}&jwt=${t}`;
-
-    } catch (e) {
-        // Network or unexpected error
-        result.textContent = "Error";
-    }
-}
-
-/* =========================
- * Load Home Posts
- * ========================= */
-
-/**
- * Load recent posts for the homepage
- */
-async function loadHome() {
-    const container = document.getElementById("posts");
-    container.textContent = "Loading...";
-
-    try {
-        // Fetch public posts from backend API
-        const posts = await API.fetchHome();
-        container.innerHTML = "";
-
-        posts.forEach(p => {
-            const div = document.createElement("div");
-            div.className = "post";
-            div.innerHTML = `
-                <div class="post-title">${p.title}</div>
-                <div class="post-meta">
-                    by ${p.author} (${p.email}) · ${p.comments} comments
-                </div>
-            `;
-            container.appendChild(div);
+        document.getElementById("loginOverlay").addEventListener("click", function(e) {
+            if (e.target === this) toggleLogin();
         });
-    } catch (e) {
-        // Failed to load posts
-        container.textContent = "Failed to load posts";
-    }
-}
 
-// Load homepage posts on initial page load
-loadHome();
-</script>
+        // Login Logic
+        async function login() {
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+            const result = document.getElementById("loginResult");
 
+            result.textContent = "Verifying credentials...";
+            result.style.color = "var(--color-text-muted)";
+
+            try {
+                const { success, username, jwt } = await API.loginUser(email, password);
+
+                if (!success) {
+                    result.textContent = "Login failed: Invalid credentials";
+                    result.style.color = "var(--color-error)";
+                    return;
+                }
+
+                result.textContent = "Success! Redirecting...";
+                result.style.color = "var(--color-success)";
+
+                const u = encodeURIComponent(username);
+                const t = encodeURIComponent(jwt);
+                setTimeout(() => {
+                    window.location.href = `personal_space.html?username=${u}&jwt=${t}`;
+                }, 800);
+
+            } catch (e) {
+                result.textContent = "Network Error";
+                result.style.color = "var(--color-error)";
+            }
+        }
+
+        // Load Home Logic - Updated with alice@example.com hint
+        async function loadHome() {
+            const container = document.getElementById("posts");
+
+            try {
+                const posts = await API.fetchHome();
+
+                if (posts.length === 0) {
+                    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;">No posts available.</div>`;
+                    return;
+                }
+
+                container.innerHTML = "";
+                posts.forEach(p => {
+                    const div = document.createElement("div");
+                    div.className = "post";
+
+                    // Display user email if available, otherwise force hint format
+                    const displayEmail = p.email ? p.email : 'alice@example.com';
+
+                    div.innerHTML = `
+                        <div class="post-title">${p.title}</div>
+                        <div style="font-size:14px; color:#64748b; margin-bottom:12px;">
+                            Click to expand thread analysis...
+                        </div>
+                        <div class="post-meta">
+                            <span>
+                                <strong>${p.author}</strong>
+                                <span style="opacity:0.7">(${displayEmail})</span>
+                            </span>
+                            <span>${p.comments} Comments</span>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (e) {
+                container.innerHTML = `<div style="color:var(--color-error); text-align:center; grid-column:1/-1;">Failed to load posts.</div>`;
+            }
+        }
+
+        loadHome();
+    </script>
 </body>
 </html>
