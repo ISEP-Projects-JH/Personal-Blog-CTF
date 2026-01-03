@@ -127,7 +127,9 @@ function getParam(name) {
 
     try {
         const res = await API.checkAdmin();
-        if (!res.success) throw new Error("Invalid admin token");
+        if (!res.success) {
+            throw new Error("Invalid admin token");
+        }
 
         loadingUi.style.display = "none";
         dashboardUi.style.display = "grid";

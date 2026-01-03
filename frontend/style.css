@@ -19,6 +19,7 @@
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
     --max-width: 1024px;
+    --ctf-widget-width: 220px;
 }
 
 * { box-sizing: border-box; }
@@ -26,7 +27,7 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: var(--font-main);
+    font-family: var(--font-main), serif;
     background-color: var(--color-bg);
     color: var(--color-text-main);
     line-height: 1.6;
@@ -45,6 +46,10 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
+}
+
+.site-header .container {
+    padding-right: calc(var(--ctf-widget-width) + 24px);
 }
 
 .container {
@@ -233,7 +238,7 @@ button.close-btn:hover { background: none; color: var(--color-text-main); }
     top: 16px;
     right: 16px;
     z-index: 9999;
-    font-family: var(--font-main);
+    font-family: var(--font-main), serif;
 }
 
 #ctf-widget .ctf-main {
