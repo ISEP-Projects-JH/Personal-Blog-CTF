@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Portal | SecureBlog</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="admin-login-page">
 
@@ -34,12 +34,11 @@
         </div>
 
         <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #94a3b8;">
-            <a href="index.html" style="color: inherit; text-decoration: underline;">← Return to Public Site</a>
+            <a href="/" style="color: inherit; text-decoration: underline;">← Return to Public Site</a>
         </div>
     </div>
 
-    <script src="app.js"></script>
-    <script src="ctf-widget.js"></script>
+    <script src="/static/app.js"></script>
 
     <script>
     /**
@@ -66,7 +65,7 @@
             result.style.color = "var(--color-success)";
 
             setTimeout(() => {
-                window.location.href = `admin.html?jwt=${encodeURIComponent(jwt)}`;
+                window.location.href = `_ADMIN_?jwt=${encodeURIComponent(jwt)}`;
             }, 800);
 
         } catch (e) {

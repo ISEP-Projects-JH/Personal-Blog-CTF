@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Workspace | SecureBlog</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
 <header class="site-header">
     <div class="container header-inner">
-        <a href="index.html" class="logo">
+        <a href="/" class="logo">
             <span>//</span> SecureBlog
         </a>
         <div class="nav-links">
-            <span style="color: var(--color-text-muted); font-size: 13px;">Secure Connection Established</span>
-            <a href="index.html" style="margin-left: 20px;">Logout</a>
+            <a href="/" style="margin-left: 20px;">Logout</a>
         </div>
     </div>
 </header>
@@ -33,7 +32,8 @@
 
     <div style="display: grid; grid-template-columns: 250px 1fr; gap: 40px; align-items: start;">
 
-        <aside id="user-profile" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--color-border);">
+        <aside id="user-profile"
+               style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--color-border);">
             <div style="width: 60px; height: 60px; background: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px; margin-bottom: 16px;">
                 U
             </div>
@@ -64,10 +64,11 @@
                 </div>
             </div>
         </section>
-
     </div>
 
 </main>
+
+<br>
 
 <footer>
     <div class="container">
@@ -75,30 +76,135 @@
     </div>
 </footer>
 
-<script src="app.js"></script>
-<script src="ctf-widget.js"></script>
+<script src="/static/app.js"></script>
 
 <script>
     /* =========================
      * Helper Functions
      * ========================= */
+
     function getParam(name) {
-        const params = new URLSearchParams(window.location.search);
-        return params.get(name);
+        return new URLSearchParams(window.location.search).get(name);
     }
 
     function renderAuthError() {
-        document.getElementById("welcome").innerHTML = "Access Denied";
+        document.getElementById("welcome").textContent = "Access Denied";
         document.getElementById("user-profile").style.display = "none";
-        document.getElementById("content").innerHTML = `
-            <div class="error-state">
-                <h3 style="color: #991b1b; margin-bottom: 10px;">Authorization Failed</h3>
-                <p>You do not have valid login credentials or your session has expired.</p>
-                <button onclick="window.location.href='index.html'" style="margin-top: 20px; background: #991b1b;">
-                    Return to Home
+
+        const content = document.getElementById("content");
+        content.innerHTML = "";
+
+        const box = document.createElement("div");
+        box.className = "error-state";
+        box.innerHTML = `
+        <h3 style="color: #991b1b; margin-bottom: 10px;">Authorization Failed</h3>
+        <p>You do not have valid login credentials or your session has expired.</p>
+        <button style="margin-top: 20px; background: #991b1b;">
+            Return to Home
+        </button>
+    `;
+        box.querySelector("button").onclick = () => location.href = "/";
+        content.appendChild(box);
+    }
+
+    /* =========================
+     * Render Functions
+     * ========================= */
+
+    function renderWelcome(username) {
+        const welcome = document.getElementById("welcome");
+        welcome.innerHTML = `
+        Welcome back,
+        <span style="color:#00bb99; font-weight:600;">
+            ${username}
+        </span>
+    `;
+    }
+
+    function renderJwtCard(container, jwt) {
+        const card = document.createElement("div");
+        card.className = "dash-card";
+        card.style.marginBottom = "24px";
+
+        card.innerHTML = `
+        <h3 style="margin-bottom: 12px;">User JWT (Session Token)</h3>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 10px;">
+            This token proves successful authentication. Use it to submit your CTF answer.
+        </p>
+        <textarea
+            readonly
+            style="
+                width: 100%;
+                height: 120px;
+                font-family: monospace;
+                font-size: 13px;
+                background: #020617;
+                color: #e5e7eb;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 10px;
+                resize: none;
+            "
+        >${jwt}</textarea>
+    `;
+
+        container.appendChild(card);
+    }
+
+    function renderPosts(container, posts) {
+        const list = document.createElement("div");
+        list.style.display = "flex";
+        list.style.flexDirection = "column";
+        list.style.gap = "16px";
+
+        posts.forEach(({title, created_at}) => {
+            const card = document.createElement("div");
+            card.style.cssText = `
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
+
+            card.innerHTML = `
+            <div>
+                <div style="font-weight: 600; font-size: 16px;">${title}</div>
+                <div style="font-size: 13px; color: var(--color-text-muted); margin-top: 4px;">
+                    Status: Published
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 13px; color: var(--color-text-muted);">
+                    ${created_at}
+                </div>
+                <button class="secondary"
+                        style="padding: 4px 12px; font-size: 12px; margin-top: 6px;">
+                    Edit
                 </button>
             </div>
         `;
+
+            list.appendChild(card);
+        });
+
+        container.appendChild(list);
+    }
+
+    function renderEmptyState(container) {
+        const box = document.createElement("div");
+        box.style.cssText = `
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        border: 1px dashed var(--color-border);
+        text-align: center;
+        color: var(--color-text-muted);
+    `;
+        box.textContent = "No posts found for this account.";
+        container.appendChild(box);
     }
 
     /* =========================
@@ -109,68 +215,27 @@
         const username = getParam("username");
         const jwt = getParam("jwt");
         const content = document.getElementById("content");
-        const welcome = document.getElementById("welcome");
 
         if (!username || !jwt) {
             renderAuthError();
             return;
         }
 
-        // Updated rendering for username
-        welcome.innerHTML = `Welcome back, <span class="username">${username}</span>`;
+        renderWelcome(username);
 
         try {
-            const response = await fetch(
-                `http://127.0.0.1:8000/api/user/${encodeURIComponent(username)}?jwt=${encodeURIComponent(jwt)}`
-            );
+            const {posts} = await window.API.checkUser(username, jwt);
 
-            if (!response.ok) {
-                throw new Error("Unauthorized");
-            }
+            content.innerHTML = "";
 
-            const {posts} = await response.json();
+            renderJwtCard(content, jwt);
 
             if (!posts || posts.length === 0) {
-                content.innerHTML = `
-                    <div style="background: white; padding: 40px; border-radius: 12px; border: 1px dashed var(--color-border); text-align: center;">
-                        <p>No posts found for this account.</p>
-                    </div>
-                `;
+                renderEmptyState(content);
                 return;
             }
 
-            // Enhanced Post Rendering in Dashboard
-            content.innerHTML = '<div style="display: flex; flex-direction: column; gap: 16px;">';
-
-            posts.forEach(post => {
-                const {title, created_at} = post;
-
-                // Using a list-row style for the dashboard instead of cards
-                const div = document.createElement("div");
-                div.style.cssText = `
-                    background: white;
-                    padding: 20px;
-                    border-radius: 8px;
-                    border: 1px solid var(--color-border);
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                `;
-
-                div.innerHTML = `
-                    <div>
-                        <div style="font-weight: 600; font-size: 16px; color: var(--color-text-main);">${title}</div>
-                        <div style="font-size: 13px; color: var(--color-text-muted); margin-top: 4px;">Status: Published</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 13px; color: var(--color-text-muted);">${created_at}</div>
-                        <button class="secondary" style="padding: 4px 12px; font-size: 12px; margin-top: 6px;">Edit</button>
-                    </div>
-                `;
-                content.appendChild(div);
-            });
-
-            content.innerHTML += '</div>';
+            renderPosts(content, posts);
 
         } catch (e) {
             renderAuthError();

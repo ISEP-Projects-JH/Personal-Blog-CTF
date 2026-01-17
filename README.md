@@ -1,241 +1,254 @@
-# Personal Blog CTF — Deployment Guide
+# Personal Blog CTF — Unified Deployment & Design Guide
 
-This document explains how to **set up the environment**, **configure databases**, and **run the backend and frontend** for the Personal Blog CTF demonstration service.
+This repository provides a **self-contained, teaching-oriented SQL injection CTF service** built around a simplified personal blog application.
 
-The project supports **two modes**:
-
-* **Production mode** (normal behavior, no flags)
-* **CTF mode** (intentionally vulnerable, flags enabled)
-
-Both modes are backed by **separate MySQL databases**.
+The project is designed as a **controlled demonstration artifact**, not a production system.
+Its primary goal is to illustrate how **security failures can arise from dependency behavior**, even when application-level business logic appears clean and reasonable.
 
 ---
 
-## 1. Prerequisites
+## 1. Project Status and Scope
 
-### System Requirements
+### Current Project State
 
-* **Python 3.11**
-* **MySQL server**
+This project has moved to a **CTF-first, container-first model**:
 
-  * Local or remote
-  * `libmysqlclient` is **NOT required**
-  * Authentication via username/password
-* **Conda or Mamba**
+* Frontend and backend run **together**
+* CTF behavior is **always enabled**
+* The Docker image is a **fully initialized, ready-to-run CTF instance**
+* No runtime database provisioning is expected or supported in Docker mode
 
-### Notes
-
-* The backend uses **PyMySQL**, not a native MySQL client.
-* CORS is **fully open by design**, as this is a teaching example.
+Local (non-Docker) execution is still possible for development and study, but **Docker is the authoritative deployment form**.
 
 ---
 
-## 2. Project Structure
+## 2. Enforced CTF Mode
 
-```
-Personal-Blog-CTF/
-├── app/
-│   └── main.py
-├── docker_scripts/
-│   └── docker-entrypoint.sh
-├── frontend/
-│   ├── admin.html
-│   ├── admin_login.html
-│   ├── app.js
-│   ├── ctf-widget.js
-│   ├── index.html
-│   ├── personal_space.html
-│   └── style.css
-├── scripts/
-│   ├── __init__.py
-│   ├── db_bootstrap.py
-│   ├── init_prod.sql
-│   ├── insert_mock.py
-│   ├── insert_mock.sql
-│   ├── remove_mock.py
-│   ├── remove_mock.sql
-│   ├── reset_ctf.sql
-│   ├── run_init_prod.py
-│   └── run_reset_ctf.py
-├── sqli_ctf/
-│   └── ctf_sql/
-├── .gitignore
-├── .gitmodules
-├── Dockerfile
-├── environment.yml
-├── project.puml
-├── pyproject.toml
-└── README.md
+CTF behavior is locked programmatically at process startup:
+
+```python
+import builtins
+builtins.CTF_MODE = "ctf"
 ```
 
-* `sqli_ctf/ctf_sql` is pulled automatically via `.gitmodules`
-* No manual installation is required for `ctf_sql`
+This guarantees:
+
+* No dependency on environment variables to select mode
+* No accidental fallback to production-safe behavior
+* Deterministic SQL execution semantics
+* Reproducible exploitation paths
+
+This project does **not** support runtime switching between production and CTF modes.
 
 ---
 
-## 3. Environment Setup (Conda)
+## 3. Architecture Overview
 
-### Create the environment
+### Runtime Model (Docker)
 
-```bash
-conda env create -f environment.yml
+```
+Browser
+  │
+  ▼
+FastAPI (API + HTML + static assets)
+  │
+  ▼
+ctf_sql.MySql (CTF backend)
+  │
+  ▼
+MariaDB (inside container)
 ```
 
-or with Mamba:
+### Key Characteristics
 
-```bash
-mamba env create -f environment.yml
-```
-
-### Activate the environment
-
-```bash
-conda activate sqli-ctf
-```
+* Single-origin deployment (same host, same port)
+* No reliance on frontend restrictions
+* Database behavior is controlled at the driver layer
+* Business logic remains readable and uncluttered
 
 ---
 
-## 4. Database Configuration
+## 4. Database Connection Design
 
-The project uses **three sets of credentials**:
+All database access is routed through a single helper:
 
-### 4.1 MySQL Admin (used only for initialization)
-
-```bash
-export MYSQL_ADMIN_HOST=127.0.0.1
-export MYSQL_ADMIN_USER=root
-export MYSQL_ADMIN_PASS=your_root_password
+```python
+def get_conn(sanitizer: Optional[Callable[[str], str]] = None):
+    """
+    Create a database connection
+    """
+    print(f"acquiring connection from: {ctf_sql.constants.CTF_SESSION_NAME}")
+    if ctf_sql.SESSION_NAME == ctf_sql.constants.CTF_SESSION_NAME:
+        return ctf_sql.MySql.connect(
+            host=ctf_sql.DB_HOST,
+            user=ctf_sql.DB_USER,
+            passwd=ctf_sql.DB_PASS,
+            db=ctf_sql.DB_NAME,
+            sanitizer=sanitizer,
+        )
+    return ctf_sql.MySql.connect(
+        host=ctf_sql.DB_HOST,
+        user=ctf_sql.DB_USER,
+        passwd=ctf_sql.DB_PASS,
+        db=ctf_sql.DB_NAME,
+    )
 ```
 
-Defaults are used if not set.
+### Why This Matters
+
+* SQL queries look normal and idiomatic
+* No SQL string manipulation in business code
+* Vulnerability behavior is injected **only at connection time**
+* The application logic itself remains easy to audit and reason about
+
+Example usage:
+
+```python
+conn = get_conn(sanitize_email)
+cur = conn.cursor()
+```
+
+This preserves the **readability and intent of the business logic**, while still allowing controlled exploitation.
 
 ---
 
-### 4.2 Production Database
+## 5. Partial Sanitization (Updated Behavior)
 
-```bash
-export DB_HOST=127.0.0.1
-export DB_USER=prod_user
-export DB_PASS=prod_password
-export DB_NAME=prod_db
-```
+Earlier iterations supported only “all blocked” or “nothing blocked”.
 
-If not exported, defaults are used.
+The current design supports **partial, selective sanitization**, allowing challenge authors to:
 
----
+* Block trivial payloads (e.g. `AND 1=1 --`)
+* Preserve intentional SQL injection paths
+* Require participants to understand:
 
-### 4.3 CTF Database
+  * Validation logic
+  * Dependency behavior
+  * Query construction
 
-```bash
-export CTF_DB_HOST=127.0.0.1
-export CTF_DB_USER=ctf_user
-export CTF_DB_PASS=ctf_password
-export CTF_DB_NAME=ctf_db
-```
-
-If not exported, defaults are used.
+These checks are **not security features**.
+They exist solely to shape the learning experience.
 
 ---
 
-## 5. Database Initialization
+## 6. Environment Variables (Runtime Configuration)
 
-### 5.1 Bootstrap Users and Databases
+### 6.1 Runtime-Configurable Variables
 
-Run once to create:
-
-* Production user & database
-* CTF user & database
+These variables **may be overridden at container startup**:
 
 ```bash
-python -m scripts.db_bootstrap
+JWT_SECRET_USER
+JWT_SECRET_ADMIN
+JWT_ALGO
+JWT_EXPIRE_SECONDS
+
+USER_MID_1
+USER_MID_2
+ADMIN_MID_1
+ADMIN_MID_2
+ADD_NUM
+
+ADMIN_URL
+ADMIN_LOGIN_URL
 ```
 
-This script behaves the same way as the original `sqli-ctf` setup.
+They affect:
+
+* Token generation
+* Proof logic
+* URL exposure
+* Session behavior
 
 ---
 
-### 5.2 Initialize Production Database (Empty)
+### 6.2 Database Variables (NOT Runtime-Configurable in Docker)
+
+The following variables **must NOT be overridden when running the Docker image**:
 
 ```bash
-python -m scripts.run_init_prod
+DB_HOST
+DB_USER
+DB_PASS
+DB_NAME
+
+CTF_DB_HOST
+CTF_DB_USER
+CTF_DB_PASS
+CTF_DB_NAME
 ```
 
-* Creates schema only
-* No mock data
-* All configuration is taken from environment variables
-* Defaults are used if nothing is exported
+#### Why?
+
+* These values are **consumed at build time**
+* During image build:
+
+  * Databases are created
+  * Users are created
+  * Schemas and CTF data are initialized
+* The resulting database state is **baked into the image**
+
+Overriding these variables at runtime would point the application to databases that:
+
+* Do not exist
+* Do not contain the expected schema
+* Break the CTF guarantees
+
+> **This behavior is intentionally different from local development.**
 
 ---
 
-### 5.3 CTF Database Reset (Recommended)
+## 7. Local Development vs Docker (Important Distinction)
 
-```bash
-python -m scripts.run_reset_ctf
-```
+### Local (Non-Docker) Execution
 
-This will:
+* You may override `DB_*` / `CTF_DB_*`
+* You must manually run:
 
-1. Drop the existing CTF database
-2. Recreate it
-3. Insert mock users, posts, and comments
-4. Reset CTF progress flags
+  * `db_bootstrap`
+  * `run_reset_ctf`
+* The database lifecycle is external and explicit
 
-Running this script is equivalent to a **full CTF reset**.
+### Docker Execution (Recommended)
 
----
+* Database is internal to the container
+* Initialization happens **once, at build time**
+* Database configuration is frozen
+* Runtime configuration is limited to secrets and routing
 
-### 5.4 Optional Mock Data Management (Production)
-
-```bash
-python -m scripts.insert_mock
-```
-
-```bash
-python -m scripts.remove_mock
-```
-
-These scripts add or remove a **small amount of mock data** in the production database.
+The Docker image should be treated as a **complete CTF artifact**, not a flexible service.
 
 ---
 
-## 6. Running the Backend
-
-### Select Mode
-
-#### CTF mode (vulnerable behavior, flags enabled)
+## 8. Docker Build
 
 ```bash
-export CTF_MODE=ctf
+docker build -t personal-blog-ctf .
 ```
 
-on Windows: 
-```bash
-set CTF_MODE=ctf
-```
+The build process:
 
-#### Production mode (safe behavior)
-
-```bash
-unset CTF_MODE
-```
-on Windows: 
-```bash
-set CTF_MODE=
-```
-
-The backend behavior is determined internally by how `ctf_sql` detects this variable.
+* Starts MariaDB internally
+* Bootstraps users and databases
+* Inserts CTF data
+* Resets flags
+* Shuts down the database
+* Freezes the resulting state into the image
 
 ---
 
-### Start the Backend
-
-From the project root:
+## 9. Docker Run
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+docker run -p 8000:8000 \
+  -e JWT_SECRET_USER=example_user_secret \
+  -e JWT_SECRET_ADMIN=example_admin_secret \
+  -e ADMIN_URL=/admin_hidden \
+  -e ADMIN_LOGIN_URL=/login_hidden \
+  personal-blog-ctf
 ```
 
-Backend will be available at:
+The service will be available at:
 
 ```
 http://localhost:8000
@@ -243,135 +256,55 @@ http://localhost:8000
 
 ---
 
-## 7. Running the Frontend
+## 10. Security Model (Explicitly Non-Production)
 
-In a separate terminal:
+This project intentionally violates real-world security practices:
 
-```bash
-cd frontend
-python -m http.server 8080
-```
+* Open CORS
+* Weak token proof logic
+* Controlled SQL injection
+* Information disclosure
+* Simplified authentication
 
-Frontend will be available at:
+These choices are **deliberate**.
 
-```
-http://localhost:8080
-```
-
----
-
-## 8. CORS Policy
-
-* CORS is **fully open** (`allow_origins=["*"]`)
-* This is intentional
-* No additional protection is implemented
-* The project is a **demonstration service**, not a hardened deployment
+> This codebase must not be used as a security reference.
 
 ---
 
-## 9. Docker Usage (Lightweight Wrapper Example)
+## 11. Educational Focus
 
-The following Docker commands are provided as a **lightweight demonstration wrapper**, not as a fully isolated deployment.
+This project demonstrates that:
 
-This Docker setup is intentionally minimal and serves the following purposes:
+* Clean business logic does not imply security
+* Dependencies are part of the attack surface
+* Partial validation often creates exploitable gaps
+* Frontend restrictions do not provide real protection
 
-* Use **Docker as an environment adapter**, replacing Conda/Mamba
-* Provide a quick way to run the project without installing Python dependencies locally
-* Keep the runtime behavior identical to the native (non-Docker) setup
-
-### Important Design Notes
-
-* **Docker does NOT replace MySQL**
-
-  * MySQL is still expected to run on the **host machine** (or a remote server)
-  * Database users, passwords, and schemas **must be configured in advance**
-* The container exposes:
-
-  * Backend on **host port 8000**
-  * Frontend on **host port 8080**
-* This is required because:
-
-  * The frontend is currently **hardcoded to call `http://localhost:8000`**
-  * Cross-origin requests (CORS) are intentionally enabled
-* The container connects to MySQL via:
-
-  * `host.docker.internal` (host machine)
-  * If you use a remote or network MySQL server, replace it with the appropriate hostname or IP
-
-The example below assumes a **local MySQL server** with an **admin user `root` / `root`** for demonstration purposes.
+**Security maintenance is essential.**
 
 ---
 
-### Docker Build
+## 12. Intended Audience
 
-```bash
-docker build -t personal-blog-ctf .
-```
+This project is intended for:
 
----
+* CTF players
+* Security learners
+* Educators
+* Challenge authors
 
-### Docker Run (POSIX systems: Linux / macOS)
-
-```bash
-docker run -it --rm \
-  -p 8080:8080 \
-  -p 8000:8000 \
-  -e MYSQL_ADMIN_HOST=host.docker.internal \
-  -e MYSQL_ADMIN_USER=root \
-  -e MYSQL_ADMIN_PASS=root \
-  -e DB_HOST=host.docker.internal \
-  -e CTF_DB_HOST=host.docker.internal \
-  -e CTF_MODE=ctf \
-  -e AUTO_DB_INIT=1 \
-  personal-blog-ctf
-```
+It is **not intended** for production deployment or best-practice reference.
 
 ---
-
-### Docker Run (Windows CMD / PowerShell)
-
-Windows shells do **not support backslash (`\`) line continuation**, so the same command must be written on a single line:
-
-```bat
-docker run -it --rm -p 8080:8080 -p 8000:8000 -e MYSQL_ADMIN_HOST=host.docker.internal -e MYSQL_ADMIN_USER=root -e MYSQL_ADMIN_PASS=root -e DB_HOST=host.docker.internal -e CTF_DB_HOST=host.docker.internal -e CTF_MODE=ctf -e AUTO_DB_INIT=1 personal-blog-ctf
-```
-
----
-
-### Environment Variable Behavior
-
-* `AUTO_DB_INIT=1`
-
-  * Automatically runs database bootstrap and initialization logic at container startup
-* `CTF_MODE=ctf`
-
-  * Enables intentionally vulnerable CTF behavior
-  * Unset or remove this variable to run in production-safe mode
-* All database-related variables behave **exactly the same** as in the non-Docker setup
-
----
-
-### Conclusion
-
-This Docker configuration:
-
-* Replaces Conda as a **runtime dependency manager**
-* Keeps MySQL **external and explicit**
-* Preserves localhost-based frontend ↔ backend communication
-* Works identically on Windows, macOS, and Linux (with shell-specific syntax differences)
-
-It is designed for **teaching, demos, and controlled experimentation**, not for hardened or isolated production deployment.
 
 ## Summary
 
-To run the project:
+* Frontend and backend run together
+* Docker provides a complete, frozen CTF environment
+* Database configuration is fixed at build time
+* Runtime overrides are limited and intentional
+* Vulnerabilities are deliberate and controlled
+* Business logic remains readable and unpolluted
 
-1. Install MySQL
-2. Create and activate the conda environment or use docker
-3. Configure database credentials (or use defaults)
-4. Run `db_bootstrap.py`
-5. Initialize production and/or reset the CTF database
-6. Select CTF or production mode
-7. Start backend and frontend
-
-This codebase is designed for **education and controlled experimentation**, not for production use.
+This repository should be studied as a **teaching artifact**, not reused as a security solution.
