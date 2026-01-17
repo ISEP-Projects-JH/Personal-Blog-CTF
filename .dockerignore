@@ -1,0 +1,57 @@
+# ==== VCS metadata ====
+.git
+.git*
+.gitmodules
+.gitignore
+
+# ==== Documentation / design files ====
+*.md
+*.puml
+
+# ==== General build artifacts ====
+build*/
+dist/
+cmake-build*/
+out*/
+Debug*/
+Release*/
+
+# ==== IDE specific ====
+.idea/
+.vscode/
+.vs/
+.DS_Store
+.project
+.classpath
+.settings/
+
+# ==== Cython / Python extensions ====
+*.so
+*.pyd
+*.dll
+*.dylib
+
+# ==== Python cache and temp ====
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ==== Packaging artifacts ====
+*.egg-info/
+*.egg
+*.whl
+*.gz
+*.tgz
+*.tar
+*.zip
+
+# ==== Setup / build tooling ====
+MANIFEST
+pip-wheel-metadata/
+
+# ==== Python virtual environments ====
+*venv/
+.venv/
+
+# ==== Runtime-generated artifacts ====
+static/config.json
